@@ -1,0 +1,129 @@
+service: auth-example
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${opt:region, 'us-east-1'}
+ # useDotenv: true  # Enable built-in dotenv support for 4.x
+  environment:
+    USER_POOL_ID: us-east-1_TPjKlkuNQ  # Reference env vars directly
+    CLIENT_ID: 6hhfvud0n05catramm9n53dnm3
+    REGION: us-east-1
+    LOG_LEVEL: debug
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - cognito-idp:InitiateAuth
+            - cognito-idp:AdminInitiateAuth
+          Resource: arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:provider.environment.USER_POOL_ID}
+
+plugins:
+  - serverless-offline  # Retained for local development
+
+functions:
+  signup:
+    handler: handler.signup
+    events:
+      - http:
+          path: signup
+          method: post
+          cors: true
+
+  login:
+    handler: handler.login
+    events:
+      - http:
+          path: login
+          method: post
+          cors: true
+
+  logo:
+    handler: handler.uploadLogo
+    events:
+      - http:
+          path: logo
+          method: post
+          cors: true
+
+  dashboard:
+    handler: handler.dashboard
+    events:
+      - http:
+          path: dashboard
+          method: get
+          cors: true
+
+  createEvent:
+    handler: handler.createEvent
+    events:
+      - http:
+          path: events
+          method: post
+          cors: true
+
+  sendReminder:
+    handler: handler.sendReminder
+    events:
+      - http:
+          path: reminders
+          method: post
+          cors: true
+
+  webrtcInfo:
+    handler: handler.webrtcInfo
+    events:
+      - http:
+          path: events/{id}/webrtc
+          method: get
+          cors: true
+
+  approveParticipant:
+    handler: handler.approveParticipant
+    events:
+      - http:
+          path: events/{id}/approve
+          method: post
+          cors: true
+
+  uploadRecording:
+    handler: handler.uploadRecording
+    events:
+      - http:
+          path: recordings
+          method: post
+          cors: true
+
+
+  completeNewPassword:
+    handler: handler.completeNewPassword
+    events:
+      - http:
+          path: completeNewPassword
+          method: post
+          cors: true 
+  protected:
+    handler: handler.protected
+    events:
+      - http:
+          path: /protected
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: ApiGatewayAuthorizer
+
+resources:
+  Resources:
+    ApiGatewayAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: CognitoAuthorizer
+        Type: COGNITO_USER_POOLS
+        IdentitySource: method.request.header.Authorization
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ProviderARNs:
+          - arn:aws:cognito-idp:${self:provider.region}:${aws:accountId}:userpool/${self:provider.environment.USER_POOL_ID}
